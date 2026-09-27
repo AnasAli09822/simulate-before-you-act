@@ -1,4 +1,6 @@
 export const SCHEMA_SQL = String.raw`
+BEGIN;
+SELECT pg_advisory_xact_lock(734642901);
 CREATE TABLE IF NOT EXISTS demo_sessions (id uuid PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS customers (id uuid PRIMARY KEY, session_id uuid NOT NULL REFERENCES demo_sessions(id) ON DELETE CASCADE, name text NOT NULL, email text NOT NULL, status text NOT NULL, last_active_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), segment text NOT NULL, UNIQUE(session_id,email));
 CREATE TABLE IF NOT EXISTS subscriptions (id uuid PRIMARY KEY, session_id uuid NOT NULL REFERENCES demo_sessions(id) ON DELETE CASCADE, customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE, plan text NOT NULL, status text NOT NULL, renewal_date date, mrr numeric(12,2) NOT NULL DEFAULT 0);
@@ -15,6 +17,20 @@ CREATE INDEX IF NOT EXISTS idx_tickets_customer ON support_tickets(session_id,cu
 CREATE INDEX IF NOT EXISTS idx_notes_customer ON customer_notes(session_id,customer_id);
 CREATE INDEX IF NOT EXISTS idx_audit_session_created ON audit_events(session_id,created_at DESC);
 CREATE OR REPLACE FUNCTION foresee_hidden_side_effect() RETURNS trigger AS $$ BEGIN IF OLD.status='chaos_case' THEN UPDATE account_summary SET enterprise_customers=GREATEST(0,enterprise_customers-1),updated_at=now() WHERE session_id=OLD.session_id; END IF; RETURN OLD; END; $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS trg_foresee_hidden_side_effect ON customers;
-CREATE TRIGGER trg_foresee_hidden_side_effect AFTER DELETE ON customers FOR EACH ROW EXECUTE FUNCTION foresee_hidden_side_effect();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'trg_foresee_hidden_side_effect'
+      AND tgrelid = 'customers'::regclass
+      AND NOT tgisinternal
+  ) THEN
+    CREATE TRIGGER trg_foresee_hidden_side_effect
+    AFTER DELETE ON customers
+    FOR EACH ROW EXECUTE FUNCTION foresee_hidden_side_effect();
+  END IF;
+END
+$$;
+COMMIT;
 `;
