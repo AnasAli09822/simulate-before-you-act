@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { ArchitecturePanel } from "./ArchitecturePanel";
 import "./globals.css";
+import "./architecture.css";
 
 export const metadata: Metadata = {
   title: "Foresee — Simulate Before You Act",
@@ -7,5 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <ArchitecturePanel />
+      </body>
+    </html>
+  );
 }
