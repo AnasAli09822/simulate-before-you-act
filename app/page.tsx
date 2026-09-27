@@ -2,9 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type ActionPlan = {
+  action: "delete_customers";
+  filters: {
+    inactive_days: number;
+    exclude_active_subscriptions: boolean;
+    exclude_enterprise: boolean;
+    limit: number | null;
+    chaos_only: boolean;
+  };
+};
+
 type Report = {
   simulation_id: string;
-  action_plan: { action: string; filters: { inactive_days: number; exclude_active_subscriptions: boolean; exclude_enterprise: boolean; limit: number | null; chaos_only: boolean } };
+  action_plan: ActionPlan;
   risk: { level: "LOW" | "MEDIUM" | "HIGH"; reasons: string[] };
   confidence: number;
   policy: { approval_allowed: boolean; reason: string };
@@ -36,8 +47,8 @@ type ExecuteResult = {
   state: DemoState;
 };
 
-const baselinePlan = {
-  action: "delete_customers" as const,
+const baselinePlan: ActionPlan = {
+  action: "delete_customers",
   filters: { inactive_days: 365, exclude_active_subscriptions: false, exclude_enterprise: false, limit: null, chaos_only: false },
 };
 
@@ -82,7 +93,7 @@ export default function Home() {
     return ["Intent"];
   }, [report, execution]);
 
-  async function runSimulation(plan = baselinePlan) {
+  async function runSimulation(plan: ActionPlan = baselinePlan) {
     if (!sessionId) return;
     setBusy(true); setError(""); setExecution(null);
     try {
@@ -134,9 +145,9 @@ export default function Home() {
     finally { setBusy(false); }
   }
 
-  const saferPlan = report ? { ...report.action_plan, filters: { ...report.action_plan.filters, exclude_active_subscriptions: true, chaos_only: false } } : baselinePlan;
-  const enterpriseSafePlan = report ? { ...report.action_plan, filters: { ...report.action_plan.filters, exclude_enterprise: true, chaos_only: false } } : baselinePlan;
-  const failurePlan = { ...baselinePlan, filters: { ...baselinePlan.filters, chaos_only: true } };
+  const saferPlan: ActionPlan = report ? { ...report.action_plan, filters: { ...report.action_plan.filters, exclude_active_subscriptions: true, chaos_only: false } } : baselinePlan;
+  const enterpriseSafePlan: ActionPlan = report ? { ...report.action_plan, filters: { ...report.action_plan.filters, exclude_enterprise: true, chaos_only: false } } : baselinePlan;
+  const failurePlan: ActionPlan = { ...baselinePlan, filters: { ...baselinePlan.filters, chaos_only: true } };
 
   return (
     <main className="shell">
